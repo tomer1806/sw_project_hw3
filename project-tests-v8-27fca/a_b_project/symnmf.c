@@ -23,8 +23,8 @@ static void error_exit() {
  */
 static double** allocate_matrix(int rows, int cols) {
     double **matrix = (double **) malloc(rows * sizeof(double *));
-    if (!matrix) error_exit();
     int i;
+    if (!matrix) error_exit();
     for (i = 0; i < rows; i++) {
         matrix[i] = (double *) calloc(cols, sizeof(double));
         if (!matrix[i]) error_exit();
@@ -134,6 +134,7 @@ static double** read_data_to_matrix(const char *file_name, int d, int *n_out) {
     char *line = NULL, *token;
     size_t len = 0;
     int n = 0, cap = 10;
+    int i;
     double **data;
     
     if (fp == NULL) error_exit();
@@ -150,7 +151,7 @@ static double** read_data_to_matrix(const char *file_name, int d, int *n_out) {
         if(!data[n]) error_exit();
         
         token = strtok(line, ",");
-        for(int i = 0; token != NULL && i < d; i++){
+        for(i = 0; token != NULL && i < d; i++){
             data[n][i] = atof(token);
             token = strtok(NULL, ",");
         }
