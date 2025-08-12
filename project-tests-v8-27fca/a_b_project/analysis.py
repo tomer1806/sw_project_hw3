@@ -40,7 +40,7 @@ def main():# Main function to run the comparison between SymNMF and K-means clus
         np.random.seed(1234)
         m = np.mean(np.array(W))
         H_init = np.random.uniform(0, 2 * np.sqrt(m / k), size=(N, k))
-
+        # Initialize H_init with the first k data points as required
         H_final = symnmf_c.symnmf(H_init.tolist(), W)
         if H_final is None:
             error_exit()
