@@ -217,30 +217,52 @@ void norm(double **A, double **D, double **W, int n) {
 void symnmf(double **W, double **H, double **H_final, int n, int k) {
     int iter = 0, i, j;
     double **WH, **HT, **HHT, **HHTH, **H_next;
+    int converged = 0;
+    
     H_next = allocate_matrix(n, k);
+
     for(iter = 0; iter < MAX_ITER; iter++) {
+        /* Perform matrix calculations for the update rule */
         WH = matrix_multiply(W, H, n, n, k);
         HT = transpose_matrix(H, n, k);
         HHT = matrix_multiply(H, HT, n, k, n);
         HHTH = matrix_multiply(HHT, H, n, n, k);
+
+        /* Apply the update rule to calculate H_next */
         for (i = 0; i < n; i++) {
             for (j = 0; j < k; j++) {
                 if(HHTH[i][j] == 0) error_exit();
                 H_next[i][j] = H[i][j] * (1 - BETA + BETA * (WH[i][j] / HHTH[i][j]));
             }
         }
+
+        /* Check for convergence before updating H */
         if (two_matrices_diff(H_next, H, n, k) < EPSILON) {
-            free_matrix(WH, n); free_matrix(HT, k); free_matrix(HHT, n); free_matrix(HHTH, n);
+            converged = 1;
+        }
+
+        /* ALWAYS update H to the newest matrix (H_next) */
+        for (i = 0; i < n; i++) {
+            memcpy(H[i], H_next[i], k * sizeof(double));
+        }
+        
+        /* Free intermediate matrices */
+        free_matrix(WH, n); 
+        free_matrix(HT, k); 
+        free_matrix(HHT, n); 
+        free_matrix(HHTH, n);
+        
+        /* Break the loop AFTER the final update if convergence was met */
+        if (converged) {
             break;
         }
-        for (i = 0; i < n; i++) {
-            for (j = 0; j < k; j++) {
-                H[i][j] = H_next[i][j];
-            }
-        }  
-        free_matrix(WH, n); free_matrix(HT, k); free_matrix(HHT, n); free_matrix(HHTH, n);
     }
-    for (i = 0; i < n; i++) memcpy(H_final[i], H[i], k * sizeof(double));
+
+    /* Now, H correctly holds the final converged matrix. Copy it to H_final. */
+    for (i = 0; i < n; i++) {
+        memcpy(H_final[i], H[i], k * sizeof(double));
+    }
+    
     free_matrix(H_next, n);
 }
 /* Main function to handle command line arguments and call appropriate functions */
