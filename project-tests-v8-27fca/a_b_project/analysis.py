@@ -3,6 +3,7 @@ import numpy as np
 import subprocess
 from sklearn.metrics import silhouette_score
 import symnmf as symnmf_c
+import os
 
 def error_exit(): # Print the standard error message and quit immediately.
     print("An Error Has Occurred")
@@ -40,7 +41,7 @@ def main():# Main function to run the comparison between SymNMF and K-means clus
         np.random.seed(1234)
         m = np.mean(np.array(W))
         H_init = np.random.uniform(0, 2 * np.sqrt(m / k), size=(N, k))
-        # Initialize H_init with the first k data points as required
+        # Initialize H_init with the first k data points as in Kmeams HW1 implementation
         H_final = symnmf_c.symnmf(H_init.tolist(), W)
         if H_final is None:
             error_exit()
@@ -51,9 +52,13 @@ def main():# Main function to run the comparison between SymNMF and K-means clus
         # Kmeans Run section
         # Prepare dataset as plain text for kmeans.py stdin
         input_str = "\n".join(",".join(map(str, row)) for row in X)
+        
+        # Get the directory of the current script to locate kmeans.py
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        kmeans_executable_path = os.path.join(script_dir, 'kmeans.py')
 
-        # Run kmeans.py with k as an argument
-        cmd = [sys.executable, "kmeans.py", str(k)]
+        # Run kmeans.py with k as an argument, using its full path
+        cmd = [sys.executable, kmeans_executable_path, str(k)]
         proc = subprocess.run(cmd, input=input_str, capture_output=True, text=True)
 
         if proc.returncode != 0:
