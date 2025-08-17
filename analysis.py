@@ -25,7 +25,7 @@ def main():# Main function to run the comparison between SymNMF and K-means clus
         file_name = sys.argv[2]
 
         # Load dataset from file
-        X = np.loadtxt(file_name, delimiter=',')
+        X = np.loadtxt(file_name, delimiter=',', ndmin=2)
         N = X.shape[0]
 
         # Silhouette score not defined for k <= 1 or k >= N
