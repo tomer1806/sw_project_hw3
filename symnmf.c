@@ -215,79 +215,99 @@ void norm(double **A, double **D, double **W, int n) {
 
 /* Computes the Symmetric Non-negative Matrix Factorization */
 void symnmf(double **W, double **H, double **H_final, int n, int k) {
-    int iter = 0, i, j;
+    int iter = 0, i, j, converged = 0;
     double **WH, **HT, **HHT, **HHTH, **H_next;
-    int converged = 0;
     H_next = allocate_matrix(n, k);
-    for(iter = 0; iter < MAX_ITER; iter++) {/* Perform matrix calculations for the update rule */
+    for(iter = 0; iter < MAX_ITER; iter++) {
+        /* These are the matrix math steps needed for the update rule */
         WH = matrix_multiply(W, H, n, n, k);
         HT = transpose_matrix(H, n, k);
         HHT = matrix_multiply(H, HT, n, k, n);
         HHTH = matrix_multiply(HHT, H, n, n, k);
-        for (i = 0; i < n; i++) { /* Apply the update rule to calculate H_next */
+        /* Apply the update rule to calculate the next version of H */
+        for (i = 0; i < n; i++) {
             for (j = 0; j < k; j++) {
                 if(HHTH[i][j] == 0) error_exit();
                 H_next[i][j] = H[i][j] * (1 - BETA + BETA * (WH[i][j] / HHTH[i][j]));
             }
         }
-        if (two_matrices_diff(H_next, H, n, k) < EPSILON) {/* Check for convergence before updating H */
-            converged = 1;
-        } /* ALWAYS update H to the newest matrix (H_next) */
+        /* Check if the change between the old H and new H is very small */
+        if (two_matrices_diff(H_next, H, n, k) < EPSILON) converged = 1;
+        /* ALWAYS update H to the newest matrix (H_next) for the next loop */
         for (i = 0; i < n; i++) {
             memcpy(H[i], H_next[i], k * sizeof(double));
-        } /* Free intermediate matrices */
+        }
+        /* Free the memory used by the temporary matrices in this loop */
         free_matrix(WH, n); 
         free_matrix(HT, k); 
         free_matrix(HHT, n); 
         free_matrix(HHTH, n);
-        if (converged) { /* Break the loop AFTER the final update if convergence was met */
-            break;
-        }
+        /* If we converged, no need to loop anymore */
+        if (converged) break;
     }
-    /* Now, H correctly holds the final converged matrix. Copy it to H_final. */
+    /* Copy the final result from H into the output matrix H_final */
     for (i = 0; i < n; i++) {
         memcpy(H_final[i], H[i], k * sizeof(double));
     }
     free_matrix(H_next, n);
 }
-/* Main function to handle command line arguments and call appropriate functions */
+/* Handles the 'sym' goal by printing the similarity matrix. */
+static void handle_sym_goal(double **A, int n) {
+    print_matrix_helper(A, n, n);
+}
+
+/* Handles the 'ddg' goal by calculating and printing the diagonal degree matrix. */
+static void handle_ddg_goal(double **A, int n) {
+    double **D = allocate_matrix(n, n);
+    ddg(A, D, n);
+    print_matrix_helper(D, n, n);
+    free_matrix(D, n);
+}
+
+/* Handles the 'norm' goal by calculating and printing the normalized similarity matrix. */
+static void handle_norm_goal(double **A, int n) {
+    double **D = allocate_matrix(n, n);
+    double **W = allocate_matrix(n, n);
+    ddg(A, D, n);
+    norm(A, D, W, n);
+    print_matrix_helper(W, n, n);
+    free_matrix(D, n);
+    free_matrix(W, n);
+}
+
+/* The main entry point: reads a goal and file, then calls a handler to print the result. */
 int main(int argc, char *argv[]) {
     char *goal, *file_name;
     int n = 0, d = 0;
-    double **X, **A, **D, **W;
+    double **X, **A;
 
     if (argc != 3) error_exit();
 
     goal = argv[1];
     file_name = argv[2];
 
+    /* Read the data points from the input file into matrix X */
     count_data_dimension(file_name, &d);
-    if(d == 0) error_exit();
+    if (d == 0) error_exit();
     X = read_data_to_matrix(file_name, d, &n);
-    if(n == 0) error_exit();
+    if (n == 0) error_exit();
 
+    /* The similarity matrix 'A' is required for all goals, so we compute it once */
     A = allocate_matrix(n, n);
     sym(X, A, n, d);
 
+    /* Call the correct helper function based on the goal */
     if (strcmp(goal, "sym") == 0) {
-        print_matrix_helper(A, n, n);
+        handle_sym_goal(A, n);
     } else if (strcmp(goal, "ddg") == 0) {
-        D = allocate_matrix(n, n);
-        ddg(A, D, n);
-        print_matrix_helper(D, n, n);
-        free_matrix(D, n);
+        handle_ddg_goal(A, n);
     } else if (strcmp(goal, "norm") == 0) {
-        D = allocate_matrix(n, n);
-        W = allocate_matrix(n, n);
-        ddg(A, D, n);
-        norm(A, D, W, n);
-        print_matrix_helper(W, n, n);
-        free_matrix(D, n);
-        free_matrix(W, n);
+        handle_norm_goal(A, n);
     } else {
         error_exit();
     }
     
+    /* Finally, clean up the memory that was allocated in main */
     free_matrix(X, n);
     free_matrix(A, n);
     

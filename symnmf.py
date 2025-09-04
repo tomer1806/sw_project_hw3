@@ -20,7 +20,7 @@ def main():
         
         # Read data from file
         try:
-            X = np.loadtxt(file_name, delimiter=',', ndmin = 2)
+            X = np.loadtxt(file_name, delimiter=',', ndmin=2)
         except Exception: # If file reading fails, exit with error
             error_exit()
             
