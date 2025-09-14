@@ -17,13 +17,11 @@ def main():
         k = int(sys.argv[1])
         goal = sys.argv[2]
         file_name = sys.argv[3]
-        
         # Read data from file
         try:
             X = np.loadtxt(file_name, delimiter=',', ndmin=2)
         except Exception: # If file reading fails, exit with error
             error_exit()
-            
         N = X.shape[0]
         if k >= N: # Checks if k is less than amount of vectors
             error_exit()
@@ -40,23 +38,25 @@ def main():
             # Initialize W
             W = symnmf_c.norm(X_list)
             W_np = np.array(W)
-            # Initialize H
             np.random.seed(1234)
             m = np.mean(W_np)
-            H_init = np.random.uniform(0, 2 * np.sqrt(m / k), size=(N, k))
+            H_init = initialize_h(W_np, k) # Call Helper function to initialize H
             H_init_list = H_init.tolist()
-            
-            # Call C implementation for optimization
-            result_matrix = symnmf_c.symnmf(H_init_list, W)
+            result_matrix = symnmf_c.symnmf(H_init_list, W) #Call C implementation for optimization
         else:
-            error_exit()
-        # If result_matrix is None, exit with error
+            error_exit() #If result_matrix is None, exit with error
         if result_matrix is None:
             error_exit()
         print_matrix_helper(result_matrix)
 
     except (ValueError, IndexError):
         error_exit()
+
+def initialize_h(W_np, k): #Initializes the H matrix for the SymNMF algorithm
+    N = W_np.shape[0]
+    m = np.mean(W_np)
+    H_init = np.random.uniform(0, 2 * np.sqrt(m / k), size=(N, k))
+    return H_init
 
 if __name__ == "__main__":
     main()

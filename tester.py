@@ -1,5 +1,6 @@
 import decimal
 from decimal import Decimal
+import importlib.util
 import enum
 import io
 from itertools import combinations
@@ -126,12 +127,20 @@ def normalized_similarity_matrix(A: np.ndarray, D: np.ndarray):
 
 
 def initialize_H(W: np.ndarray, k: int, set_seed=False):
-    from symnmf import init_H
+    """
+    This function now explicitly loads initialize_h from the symnmf.py file
+    to avoid a name conflict with the compiled C extension module.
+    """
+    # Find and load the symnmf.py file specifically
+    spec = importlib.util.spec_from_file_location("symnmf_py", "symnmf.py")
+    symnmf_py_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(symnmf_py_module)
 
     if set_seed:
         np.random.seed(1234)
 
-    return init_H(W, k)
+    # Call the function from the loaded Python module
+    return symnmf_py_module.initialize_h(W, k)
 
 
 def symnmf_main(W: np.ndarray, k: int, set_seed=False):
@@ -421,7 +430,7 @@ def test_goal(
 
 
 def test_symnmf_lib():
-    import symnmf_c as symnmf
+    import symnmf as symnmf
 
     test_data = TestData(round=False)
     rng = np.random.default_rng()
@@ -432,27 +441,27 @@ def test_symnmf_lib():
     )
 
     goal_name = format_goal_name("sym")
-    A = np.array(symnmf.sym(test_data.X))
+    A = np.array(symnmf.sym(test_data.X.tolist()))
     if not np.all(np.linalg.norm(test_data.A - A, axis=1) < EPS):
         print_red(err_msg.format(goal_name))
         return False
 
     goal_name = format_goal_name("ddg")
-    D = np.array(symnmf.ddg(test_data.X))
+    D = np.array(symnmf.ddg(test_data.X.tolist()))
     if not np.all(np.linalg.norm(test_data.D - D, axis=1) < EPS):
         print_red(err_msg.format(goal_name))
         return False
 
     goal_name = format_goal_name("norm")
     W_target = normalized_similarity_matrix(test_data.A, test_data.D)
-    W = np.array(symnmf.norm(test_data.X))
+    W = np.array(symnmf.norm(test_data.X.tolist()))
     if not np.all(np.linalg.norm(W_target - W, axis=1) < EPS):
         print_red(err_msg.format(goal_name))
         return False
 
     goal_name = format_goal_name("symnmf")
     initial_H, final_H_target = symnmf_main(W, k)
-    final_H = np.array(symnmf.symnmf(initial_H, W))
+    final_H = np.array(symnmf.symnmf(initial_H.tolist(), W.tolist()))
     if not np.all(np.linalg.norm(final_H_target - final_H, axis=1) < EPS):
         print_red(err_msg.format(goal_name))
         return False
